@@ -138,6 +138,8 @@ export const useSchedule = ({
       invalidate: () => {
         return teamSchedule.refetch();
       },
+        return teamSchedule.refetch();
+      },
     };
   }
 
