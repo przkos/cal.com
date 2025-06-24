@@ -8,6 +8,8 @@ import { PUBLIC_QUERY_AVAILABLE_SLOTS_INTERVAL_SECONDS } from "@calcom/lib/const
 import { getUsernameList } from "@calcom/lib/defaultEvents";
 import { trpc } from "@calcom/trpc/react";
 
+import { useApiV2AvailableSlots } from "./useApiV2AvailableSlots";
+
 export type UseScheduleWithCacheArgs = {
   username?: string | null;
   eventSlug?: string | null;
@@ -114,12 +116,34 @@ export const useSchedule = ({
       (Boolean(eventSlug) || Boolean(eventId) || eventId === 0),
   };
 
-  let schedule;
+  const teamSchedule = useApiV2AvailableSlots({
+    enabled: Boolean(isTeamEvent),
+    ...input,
+    duration: input.duration ? Number(input.duration) : undefined,
+    routedTeamMemberIds: input.routedTeamMemberIds ?? undefined,
+    teamMemberEmail: input.teamMemberEmail ?? undefined,
+    eventTypeId: eventId ?? undefined,
+  });
+
   if (isTeamEvent) {
-    schedule = trpc.viewer.highPerf.getTeamSchedule.useQuery(input, options);
-  } else {
-    schedule = trpc.viewer.slots.getSchedule.useQuery(input, options);
+    updateEmbedBookerState({
+      bookerState,
+      slotsQuery: teamSchedule,
+    });
+    return {
+      ...teamSchedule,
+      /**
+       * Invalidates the request and resends it regardless of any other configuration including staleTime
+       */
+      invalidate: () => {
+        return teamSchedule.refetch();
+      },
+        return teamSchedule.refetch();
+      },
+    };
   }
+
+  const schedule = trpc.viewer.slots.getSchedule.useQuery(input, options);
 
   updateEmbedBookerState({
     bookerState,
